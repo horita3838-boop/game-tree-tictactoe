@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ゲーム木で戦う 両端カード取りゲーム</title>
+<style>
+:root{--bg:#f4f6fb;--panel:#fff;--ink:#20242c;--muted:#687180;--line:#d9dee8;--accent:#5f3dc4;--human:#e8590c;--ai:#1971c2;--good:#2b8a3e;--soft:#f3f0ff;--shadow:0 12px 32px rgba(31,45,61,.09)}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(145deg,#f8f9ff,var(--bg) 55%,#eef3fb);color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6;min-height:100vh}
+main{max-width:1120px;margin:auto;padding:28px 16px 64px}
+h1{margin:0 0 5px;font-size:clamp(1.75rem,4vw,2.55rem);letter-spacing:-.03em}.lead{color:var(--muted);margin:0 0 22px}
+.layout{display:grid;grid-template-columns:minmax(390px,1fr) minmax(360px,.9fr);gap:18px;align-items:start}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}h2{font-size:1.12rem;margin:0 0 12px}
+.scoreboard{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:18px}.score{padding:12px;border-radius:12px;text-align:center;background:#f8f9fc;border:1px solid var(--line)}.score.human{border-top:4px solid var(--human)}.score.ai{border-top:4px solid var(--ai)}.score span{display:block;color:var(--muted);font-size:.85rem}.score strong{display:block;font-size:1.8rem;line-height:1.2}.versus{font-weight:800;color:var(--muted)}
+.table{min-height:142px;padding:18px 12px;border-radius:16px;background:#edf1f7;border:1px solid #d9e0eb;display:flex;align-items:center}.cards{display:flex;gap:8px;justify-content:center;align-items:center;width:100%;overflow-x:auto;padding:7px 3px}.card{flex:0 0 58px;height:86px;border:2px solid #c5ccda;border-radius:11px;background:#fff;display:grid;place-items:center;font-size:1.65rem;font-weight:850;color:#343a40;box-shadow:0 5px 10px rgba(31,45,61,.09)}button.card{font:inherit;font-size:1.65rem;font-weight:850;cursor:pointer;transition:.15s ease}button.card.edge{border-color:var(--accent);color:var(--accent);transform:translateY(-3px)}button.card.edge:hover:enabled{transform:translateY(-7px);box-shadow:0 9px 18px rgba(95,61,196,.2)}button.card:disabled{cursor:default}.empty-table{color:var(--muted);font-weight:700}.edge-labels{display:flex;justify-content:space-between;color:var(--accent);font-size:.8rem;font-weight:750;margin:4px 5px 0}
+.status{margin-top:14px;padding:12px 14px;background:#f8f9fc;border-left:4px solid var(--accent);border-radius:8px;min-height:52px}.history{display:flex;gap:6px;align-items:center;overflow-x:auto;min-height:38px;margin-top:12px;padding-bottom:3px}.history-label{font-size:.8rem;color:var(--muted);white-space:nowrap}.pick{flex:0 0 auto;border-radius:999px;padding:4px 9px;font-size:.8rem;font-weight:750}.pick.human{background:#fff4e6;color:var(--human)}.pick.ai{background:#e7f5ff;color:var(--ai)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button.ctrl{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:9px 13px;font:inherit;cursor:pointer}button.ctrl:hover{border-color:var(--accent)}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}.stat{padding:10px 6px;border:1px solid var(--line);border-radius:10px;text-align:center}.stat span{display:block;color:var(--muted);font-size:.75rem}.stat b{display:block;font-size:1.15rem}.muted{color:var(--muted);font-size:.9rem}
+.tree{margin-top:15px}.root-node{width:max-content;max-width:100%;margin:0 auto 18px;padding:9px 14px;border-radius:10px;background:var(--soft);border:2px solid #b197fc;font-weight:750;text-align:center}.branches{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative}.branches::before{content:"";position:absolute;left:25%;right:25%;top:-10px;border-top:2px solid #c8ced9}.branch{position:relative;border:1px solid var(--line);border-radius:13px;padding:13px;background:#fafbfe;min-width:0}.branch::before{content:"";position:absolute;left:50%;top:-10px;height:10px;border-left:2px solid #c8ced9}.branch.best{border:2px solid var(--good);background:#ebfbee;box-shadow:0 5px 14px rgba(43,138,62,.1)}.branch h3{font-size:.95rem;margin:0 0 6px}.branch .take{font-size:1.4rem;font-weight:850}.branch .forecast{font-size:.82rem;color:var(--muted)}.branch.best .forecast{color:var(--good);font-weight:750}.badge{display:inline-block;margin-top:7px;border-radius:999px;padding:2px 8px;background:var(--good);color:#fff;font-size:.74rem;font-weight:800}.decision{margin-top:14px;padding:13px 15px;border-left:4px solid var(--good);border-radius:8px;background:#f3faf5}.decision strong{color:var(--good)}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;font-weight:750;color:var(--accent)}.line-read{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.line-step{border-radius:8px;padding:5px 8px;background:#f1f3f5;font-size:.8rem}.explain{margin-top:18px;padding:14px 16px;background:var(--soft);border-radius:12px}.explain b{color:var(--accent)}
+.minimax-box{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:#fff9db;border:1px solid #ffe066;font-size:.87rem}.minimax-box b{color:#a06100}.tree-note{margin:10px 0 0;font-size:.82rem;color:var(--muted)}.predicted-score{margin-top:8px;font-weight:850;font-size:1rem}.margin{margin-top:2px;font-size:.82rem;font-weight:750}.margin.ai-ahead{color:var(--good)}.margin.human-ahead{color:var(--human)}.margin.even{color:var(--muted)}
+.choice-count{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:14px 0}.count-item{padding:8px 12px;border-radius:10px;background:var(--soft);border:1px solid #d0bfff;text-align:center}.count-item span{display:block;color:var(--muted);font-size:.74rem}.count-item strong{display:block;color:var(--accent);font-size:1.08rem}.count-note{margin:-5px 0 12px;text-align:center;color:var(--muted);font-size:.78rem}
+@media(max-width:860px){.layout{grid-template-columns:1fr}}@media(max-width:520px){.panel{padding:15px}.card{flex-basis:46px;height:72px;font-size:1.35rem}button.card{font-size:1.35rem}.branches{gap:7px}.branch{padding:10px 8px}.stats{gap:6px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>ゲーム木で戦う 両端カード取りゲーム</h1>
+  <p class="lead">左右どちらかの端からカードを取り、合計点を競います。配置が変わるたび、最善手も変わります。</p>
+  <div class="layout">
+    <section class="panel">
+      <h2>AIと対戦する</h2>
+      <div class="scoreboard">
+        <div class="score human"><span>あなた</span><strong id="humanScore">0</strong></div><div class="versus">VS</div>
+        <div class="score ai"><span>AI</span><strong id="aiScore">0</strong></div>
+      </div>
+      <div class="table"><div class="cards" id="cards"></div></div>
+      <div class="edge-labels"><span>← 左端</span><span>右端 →</span></div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="history" id="history"><span class="history-label">取った順：</span></div>
+      <div class="controls">
+        <button class="ctrl primary" id="newGame">新しい並びで遊ぶ</button>
+        <button class="ctrl" id="changeFirst">人間を先手にする</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>読んだ局面</span><b id="visited">0</b></div>
+        <div class="stat"><span>読みの深さ</span><b id="depth">–</b></div>
+        <div class="stat"><span>予想 人間−AI</span><b id="prediction">–</b></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>人間へのアドバイス</h2>
+      <div class="minimax-box"><b>これがミニマックス法です。</b> この先でAIも最善手を選ぶと考えて最後まで読み、あなたの最終得点がより高くなる手を探します。</div>
+      <p class="muted">次に左端と右端のどちらを取るべきか、予想される最終スコアを比べておすすめします。</p>
+      <div id="thinking"><p class="muted">あなたの番になると、ここにおすすめが表示されます。</p></div>
+    </section>
+  </div>
+  <div class="explain"><b>最強AIのポイント：</b> 目の前の大きな数字を取るとは限りません。相手も最善手を選ぶと考え、ゲーム木の末端から得点を戻して、最終的な点差が最大になる手を選びます。</div>
+</main>
+<script>
+const HUMAN=1,AI=-1,BASE_DECK=[1,2,3,4,5,6,7,8];
+let cards=[],humanScore=0,aiScore=0,turn=AI,aiStarts=true,history=[],thinking=false,visited=0,memo=new Map();
+const $=id=>document.getElementById(id);
+function shuffle(values){const out=values.slice();for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}return out}
+function solve(values,player){
+  visited++;
+  if(!values.length)return{diff:0,aiGain:0,humanGain:0,line:[]};
+  const key=`${player}|${values.join(',')}`;
+  if(memo.has(key))return memo.get(key);
+  const sides=values.length===1?['left']:['left','right'];
+  const choices=sides.map(side=>{
+    const index=side==='left'?0:values.length-1,value=values[index];
+    const rest=side==='left'?values.slice(1):values.slice(0,-1),future=solve(rest,-player);
+    const aiGain=future.aiGain+(player===AI?value:0),humanGain=future.humanGain+(player===HUMAN?value:0);
+    return{side,value,aiGain,humanGain,diff:aiGain-humanGain,line:[{side,value,player},...future.line]};
+  });
+  choices.sort((a,b)=>player===AI?b.diff-a.diff:a.diff-b.diff);
+  memo.set(key,choices[0]);return choices[0];
+}
+function analyzeChoices(values,player){
+  const sides=values.length===1?['left']:['left','right'];
+  return sides.map(side=>{
+    const index=side==='left'?0:values.length-1,value=values[index];
+    const rest=side==='left'?values.slice(1):values.slice(0,-1),future=solve(rest,-player);
+    const aiGain=future.aiGain+(player===AI?value:0),humanGain=future.humanGain+(player===HUMAN?value:0);
+    return{side,value,diff:aiGain-humanGain,aiFinal:aiScore+aiGain,humanFinal:humanScore+humanGain,line:[{side,value,player},...future.line]};
+  });
+}
+function humanMarginInfo(h,a){
+  const diff=h-a;
+  if(diff>0)return{text:`あなたが${diff}点有利`,className:'ai-ahead'};
+  if(diff<0)return{text:`AIが${-diff}点有利`,className:'human-ahead'};
+  return{text:'同点',className:'even'};
+}
+function sideName(side){return side==='left'?'左端':'右端'}
+function chooseAI(){
+  visited=0;memo=new Map();const before=cards.slice(),choices=analyzeChoices(before,AI);
+  const bestDiff=Math.max(...choices.map(c=>c.diff)),bestList=choices.filter(c=>c.diff===bestDiff),best=bestList[Math.floor(Math.random()*bestList.length)];
+  return best.side;
+}
+function take(side,player){const value=side==='left'?cards.shift():cards.pop();if(player===HUMAN)humanScore+=value;else aiScore+=value;history.push({player,value,side})}
+function humanMove(side){
+  if(turn!==HUMAN||thinking||!cards.length)return;
+  take(side,HUMAN);turn=AI;
+  if(cards.length)$('thinking').innerHTML='<p class="muted">AIが次の手を読んでいます…</p>';
+  render();if(cards.length)aiMove();
+}
+function aiMove(){
+  if(!cards.length)return;
+  thinking=true;render();
+  setTimeout(()=>{
+    const side=chooseAI();take(side,AI);turn=HUMAN;thinking=false;render();
+    if(cards.length)renderHumanAdvice();
+  },350)
+}
+function renderCards(){
+  $('cards').innerHTML='';if(!cards.length){$('cards').innerHTML='<span class="empty-table">カードをすべて取り終えました</span>';return}
+  cards.forEach((value,index)=>{const isLeft=index===0,isRight=index===cards.length-1,selectable=turn===HUMAN&&!thinking&&(isLeft||isRight),card=document.createElement('button');card.className=`card ${selectable?'edge':''}`;card.textContent=value;card.disabled=!selectable;card.setAttribute('aria-label',isLeft?`左端の${value}を取る`:isRight?`右端の${value}を取る`:`${value}`);if(selectable)card.onclick=()=>humanMove(isLeft?'left':'right');$('cards').appendChild(card)})
+}
+function renderHistory(){$('history').innerHTML='<span class="history-label">取った順：</span>';history.forEach(item=>{const chip=document.createElement('span');chip.className=`pick ${item.player===AI?'ai':'human'}`;chip.textContent=`${item.player===AI?'AI':'人'} ${item.value}`;$('history').appendChild(chip)})}
+function render(){
+  $('humanScore').textContent=humanScore;$('aiScore').textContent=aiScore;renderCards();renderHistory();
+  if(!cards.length){
+    $('status').innerHTML=aiScore>humanScore?`<b>AIの勝ち！</b> ${aiScore}対${humanScore}でした。`:aiScore<humanScore?`<b>あなたの勝ち！</b> ${humanScore}対${aiScore}でした。`:`<b>引き分け！</b> ${aiScore}対${humanScore}でした。`;
+    $('thinking').innerHTML=`<div class="decision"><strong>対戦終了：</strong>あなたは${humanScore}点、AIは${aiScore}点でした。新しい並びでは、おすすめの手も変わります。</div>`;
+  }
+  else if(thinking)$('status').innerHTML='AIがゲーム木を最後まで読んでいます…';
+  else if(turn===HUMAN)$('status').innerHTML='あなたの番です。<b>左端か右端のカード</b>を選んでください。';else $('status').innerHTML='AIの番です。';
+}
+function renderHumanAdvice(){
+  if(!cards.length||turn!==HUMAN)return;
+  visited=0;memo=new Map();
+  const before=cards.slice(),choices=analyzeChoices(before,HUMAN);
+  const bestDiff=Math.min(...choices.map(c=>c.diff));
+  const best=choices.find(c=>c.diff===bestDiff);
+  $('visited').textContent=visited.toLocaleString();
+  $('depth').textContent=`${before.length}手`;
+  $('prediction').textContent=`${best.humanFinal}–${best.aiFinal}`;
+
+  const routeCount=before.length?2**Math.max(before.length-1,0):0;
+  const branches=choices.map(c=>{
+    const margin=humanMarginInfo(c.humanFinal,c.aiFinal);
+    return `<div class="branch ${c.side===best.side?'best':''}"><h3>${sideName(c.side)}を取る</h3><div class="take">${c.value}点</div><div class="predicted-score">あなた ${c.humanFinal} − ${c.aiFinal} AI</div><div class="margin ${margin.className}">${margin.text}</div>${c.side===best.side?'<span class="badge">おすすめ</span>':''}</div>`;
+  }).join('');
+  const line=best.line.map(s=>`<span class="line-step">${s.player===AI?'AI':'人'}：${sideName(s.side)} ${s.value}点</span>`).join('');
+  const comparisons=choices.map(c=>`${sideName(c.side)}ならあなたは最終${c.humanFinal}点`).join('、');
+  const sameScore=choices.length>1&&choices.every(c=>c.humanFinal===best.humanFinal);
+  const conclusion=sameScore?`どちらを選んでも、あなたの予想得点は${best.humanFinal}点です。`:`${comparisons}。より高得点になるため、${sideName(best.side)}の${best.value}点がおすすめです。`;
+  $('thinking').innerHTML=`<div class="choice-count"><div class="count-item"><span>今すぐ選べる手</span><strong>${choices.length}つ</strong></div><div class="count-item"><span>最後までの手順</span><strong>${routeCount.toLocaleString()}通り</strong></div></div><p class="count-note">残り${before.length}枚をすべて取るまでに、ゲーム木は${routeCount.toLocaleString()}本の手順へ分かれます。</p><div class="tree"><div class="root-node">残り：${before.join('・')}</div><div class="branches">${branches}</div></div><div class="decision"><strong>あなたへのアドバイス：</strong>${conclusion}</div><details><summary>この先の予想手順を見る</summary><div class="line-read">${line}</div></details>`;
+}
+function resetGame(humanFirst=false){
+  cards=shuffle(BASE_DECK);humanScore=0;aiScore=0;history=[];thinking=false;aiStarts=!humanFirst;turn=humanFirst?HUMAN:AI;visited=0;memo=new Map();
+  $('visited').textContent='0';$('depth').textContent='–';$('prediction').textContent='–';$('thinking').innerHTML='<p class="muted">あなたの番になると、ここにおすすめが表示されます。</p>';
+  $('changeFirst').textContent=humanFirst?'AIを先手にする':'人間を先手にする';render();if(aiStarts)aiMove();else renderHumanAdvice();
+}
+$('newGame').onclick=()=>resetGame(!aiStarts);
+$('changeFirst').onclick=()=>resetGame(aiStarts);
+resetGame(false);
+</script>
+</body>
+</html>
